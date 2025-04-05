@@ -5,7 +5,7 @@ Ce projet a pour objectif d'explorer et d'interroger des bases de données NoSQL
 ## Fonctionnalités
 
 - **MongoDB :**
-  - Importation des données de films depuis un fichier JSON.
+  - Importation des données de films depuis un fichier JSON
   - Exécution de requêtes pour extraire des informations telles que :
     - Année avec le plus grand nombre de films.
     - Nombre de films sortis après 1999.
