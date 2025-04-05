@@ -2,6 +2,44 @@
 
 Ce projet a pour objectif d'explorer et d'interroger des bases de données NoSQL en utilisant MongoDB et Neo4j, tout en fournissant une interface interactive développée avec Streamlit. Il permet d'analyser une collection de films et de visualiser diverses statistiques et relations (acteurs, réalisateurs, genres, etc.).
 
+## Prérequis
+
+- Python 3.x
+
+- Git
+
+## Étapes d'installation
+
+1 **Cloner le dépôt GitHub :**
+git clone https://github.com/votre-utilisateur/votre-repo.git
+cd votre-repo
+
+2 **Créer et activer un environnement virtuel :**
+- Sur Windows :
+
+python -m venv venv
+venv\Scripts\activate
+
+- Sur macOS/Linux :
+python -m venv venv
+source venv/bin/activate
+
+3 **Installer les dépendances :**
+pip install -r requirements.txt
+
+4 **Utilisation
+- Lancer l'application
+Pour démarrer l'application, assurez-vous d'abord que votre environnement virtuel est activé, puis exécutez :
+streamlit run app.py
+
+Cela ouvrira une interface web dans votre navigateur où vous pourrez :
+- **Interroger la base MongoDB pour analyser les films.
+
+- **Explorer le graphe Neo4j avec diverses requêtes.
+
+- **Visualiser des graphiques et tableaux interactifs.
+
+
 ## Fonctionnalités
 
 - **MongoDB :**
@@ -45,4 +83,3 @@ PROJET_NOSQL
 ├── correlation_duree_revenu.png  # Exemple de graphique généré pour la corrélation durée-revenu
 ├── import_neo4j.py            # Script d'importation des données de MongoDB vers Neo4j
 └── requirements.txt           # Liste des dépendances du projet
-
