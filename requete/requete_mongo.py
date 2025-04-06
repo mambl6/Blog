@@ -1,3 +1,4 @@
+# Import des modules nécessaires pour la connexion à MongoDB, le traitement de données et la visualisation
 from database.connexion_mongo import connexion_mongo
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -5,11 +6,19 @@ from scipy.stats import pearsonr
 import seaborn as sns
 import io
 
+# Établissement de la connexion MongoDB et accès à la collection 'films'
 client = connexion_mongo()
 db = client.entertainment
 films = db.films
 
+
+# ----------------------------
+# Requête 1 : Année avec le plus grand nombre de films
+# ----------------------------
 def annee_avec_plus_de_film():
+    """
+    Retourne l'année qui compte le plus grand nombre de films et le nombre de films correspondants.
+    """
     pipeline = [
         {"$group": {"_id": "$year", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
@@ -20,31 +29,50 @@ def annee_avec_plus_de_film():
         return {"Année": result[0]["_id"], "Nombre de films": result[0]["count"]}
     return {"Année": "N/A", "Nombre de films": 0}
 
+
+# ----------------------------
+# Requête 2 : Nombre de films sortis après 1999
+# ----------------------------
 def films_apres_1999():
+    """
+    Retourne le nombre de films sortis après l'année 1999.
+    """
     count = films.count_documents({"year": {"$gt": 1999}})
     return {"Nombre de films après 1999": count}
 
+
+# ----------------------------
+# Requête 3 : Moyenne des votes des films sortis en 2007
+# ----------------------------
 def moyenne_votes_2007():
+    """
+    Calcule et retourne la moyenne des votes pour les films de l'année 2007.
+    """
     pipeline = [
         {"$match": {"year": 2007, "votes": {"$exists": True, "$ne": None}}},
         {"$group": {"_id": None, "avg_votes": {"$avg": "$votes"}}}
     ]
     result = list(films.aggregate(pipeline))
-
-    # Vérification renforcée
+    # Vérification renforcée pour s'assurer que la moyenne est bien calculée
     if result and "avg_votes" in result[0] and isinstance(result[0]["avg_votes"], (int, float)):
         return {"Moyenne des votes en 2007": round(result[0]["avg_votes"], 2)}
+    return {"Moyenne des votes en 2007": "N/A"}
 
-    return {"Moyenne des votes en 2007": "N/A"}  # Gérer le cas où la moyenne est `None`
 
-
+# ----------------------------
+# Requête 4 : Histogramme du nombre de films par année
+# ----------------------------
 def histogramme_films_par_annee():
+    """
+    Crée un histogramme du nombre de films par année et retourne le graphique sous forme de buffer.
+    """
     pipeline = [{"$match": {"year": {"$exists": True}}},
                 {"$group": {"_id": "$year", "count": {"$sum": 1}}}]
     data = list(films.aggregate(pipeline))
     df = pd.DataFrame(data)
     df = df.dropna()
     
+    # Création du graphique
     plt.figure(figsize=(12, 6))
     plt.bar(df["_id"].astype(int), df["count"])
     plt.xlabel("Année")
@@ -53,18 +81,26 @@ def histogramme_films_par_annee():
     plt.xticks(rotation=45)
     plt.tight_layout()
     
+    # Sauvegarde du graphique dans un buffer en mémoire
     buf = io.BytesIO()
     plt.savefig(buf, format="png")
     plt.close()
     buf.seek(0)
     return buf
 
+
+# ----------------------------
+# Requête 5 : Extraction des genres disponibles
+# ----------------------------
 def genres_disponibles():
+    """
+    Retourne une liste triée des genres uniques présents dans la collection des films.
+    """
     try:
-        # 1. Récupère toutes les entrées distinctes de genre
+        # Récupère toutes les entrées distinctes de genre
         genres_distincts = films.distinct("genre")
         
-        # 2. Sépare et nettoie les genres
+        # Sépare et nettoie les genres pour éliminer les doublons
         genres_uniques = set()
         for genre_str in genres_distincts:
             if genre_str:  # Ignore les valeurs vides
@@ -73,14 +109,20 @@ def genres_disponibles():
                     if genre_nettoye:
                         genres_uniques.add(genre_nettoye)
         
-        # 3. Retourne les genres triés
+        # Retourne les genres triés
         return {"Genres uniques": sorted(genres_uniques)}
     
     except Exception as e:
         return {"Erreur": f"Erreur lors de la récupération des genres: {str(e)}"}
-    
-# requête6  
+
+
+# ----------------------------
+# Requête 6 : Film avec le plus gros revenu
+# ----------------------------
 def film_plus_gros_revenu():
+    """
+    Retourne les informations du film qui a généré le plus gros revenu.
+    """
     try:
         pipeline = [
             {"$sort": {"Revenue (Millions)": -1}},
@@ -101,7 +143,7 @@ def film_plus_gros_revenu():
         film = result[0]
         revenu = film.get("Revenu")
         
-        # Gestion du cas où le revenu est None ou non numérique
+        # Conversion sécurisée du revenu en nombre
         try:
             revenu_num = float(revenu) if revenu is not None else None
         except (ValueError, TypeError):
@@ -110,19 +152,20 @@ def film_plus_gros_revenu():
         return {
             "Titre": film["Titre"],
             "Année": film["Année"],
-            "Revenu": revenu_num,
-            #"Revenu formaté": f"{revenu_num:,.2f} M$" if revenu_num is not None else "Non disponible"
+            "Revenu": revenu_num
         }
         
     except Exception as e:
         return {"Erreur": f"Erreur MongoDB: {str(e)}"}
-    
 
-# Requête 7
+
+# ----------------------------
+# Requête 7 : Réalisateurs ayant réalisé plus de 5 films
+# ----------------------------
 def realisateurs_plus_de_5_films():
     """
-    Trouve les réalisateurs ayant réalisé plus de 5 films
-    Retourne une liste de dictionnaires avec le nom du réalisateur et le nombre de films
+    Retourne une liste de dictionnaires contenant le nom du réalisateur et le nombre de films,
+    pour les réalisateurs ayant réalisé plus de 5 films.
     """
     pipeline = [
         {"$group": {
@@ -144,14 +187,16 @@ def realisateurs_plus_de_5_films():
     results = list(films.aggregate(pipeline))
     return results if results else []
 
-# Requête 8
+
+# ----------------------------
+# Requête 8 : Genre de film le plus rentable en moyenne
+# ----------------------------
 def genre_plus_rentable():
     """
-    Trouve le genre de film le plus rentable en moyenne
-    Retourne un dictionnaire avec le genre et le revenu moyen
+    Retourne le genre dont le revenu moyen est le plus élevé.
     """
     pipeline = [
-        {"$unwind": "$Genre"},  # Dédouble les films avec plusieurs genres
+        {"$unwind": "$Genre"},  # Dédouble les films ayant plusieurs genres
         {"$group": {
             "_id": "$Genre",
             "revenu_moyen": {"$avg": "$Revenue"}
@@ -167,8 +212,11 @@ def genre_plus_rentable():
     result = list(films.aggregate(pipeline))
     return result[0] if result else {"Erreur": "Aucun résultat trouvé"}
 
+
 def get_genre_revenues():
-    """Récupère les revenus moyens pour tous les genres (pour la visualisation)"""
+    """
+    Récupère les revenus moyens pour tous les genres, utile pour des visualisations.
+    """
     pipeline = [
         {"$unwind": "$Genre"},
         {"$group": {
@@ -185,172 +233,121 @@ def get_genre_revenues():
     return list(films.aggregate(pipeline))
 
 
-# Requête 9
+# ----------------------------
+# Requête 9 : Top 3 films par décennie depuis 1990
+# ----------------------------
 def top_films_par_decennie():
     """
-    Trouve les 3 meilleurs films par décennie depuis 1990.
-    Classement : 
-    1. Films "G" > "unrated"
-    2. En cas d'égalité, plus de Votes d'abord.
+    Retourne les 3 meilleurs films par décennie depuis 1990.
+    Critères de classement :
+      1. Priorité aux films avec rating "G" sur "unrated".
+      2. En cas d'égalité, tri par nombre de votes décroissant.
     """
     pipeline = [
-        # Filtrer depuis 1990 et les films avec rating/Votes valides
-        {
-            "$match": {
-                "year": {"$gte": 1990, "$exists": True},
-                "rating": {"$in": ["G", "unrated"]},
-                "Votes": {"$exists": True, "$ne": None}
+        {"$match": {
+            "year": {"$gte": 1990, "$exists": True},
+            "rating": {"$in": ["G", "unrated"]},
+            "Votes": {"$exists": True, "$ne": None}
+        }},
+        {"$addFields": {
+            "Decennie": {
+                "$concat": [
+                    {"$toString": {"$subtract": ["$year", {"$mod": ["$year", 10]}]}},
+                    "-",
+                    {"$toString": {"$add": [{"$subtract": ["$year", {"$mod": ["$year", 10]}]}, 9]}}
+                ]
+            },
+            "RatingPriority": {
+                "$cond": [{"$eq": ["$rating", "G"]}, 1, 2]
             }
-        },
-        # Calculer la décennie (ex: 2016 → "2010-2019")
-        {
-            "$addFields": {
-                "Decennie": {
-                    "$concat": [
-                        {"$toString": {"$subtract": ["$year", {"$mod": ["$year", 10]}]}},
-                        "-",
-                        {"$toString": {"$add": [{"$subtract": ["$year", {"$mod": ["$year", 10]}]}, 9]}}
-                    ]
-                },
-                # Priorité : "G"=1, "unrated"=2 (pour tri ascendant)
-                "RatingPriority": {
-                    "$cond": [{"$eq": ["$rating", "G"]}, 1, 2]
+        }},
+        {"$sort": {
+            "Decennie": 1,
+            "RatingPriority": 1,
+            "Votes": -1
+        }},
+        {"$group": {
+            "_id": "$Decennie",
+            "films": {
+                "$push": {
+                    "Titre": "$title",
+                    "Année": "$year",
+                    "Rating": "$rating",
+                    "Votes": "$Votes",
+                    "Réalisateur": "$Director"
                 }
             }
-        },
-        # Trier par : Décennie → Rating → Votes (décroissant)
-        {
-            "$sort": {
-                "Decennie": 1,
-                "RatingPriority": 1,
-                "Votes": -1
-            }
-        },
-        #Garder les 3 premiers films par décennie
-        {
-            "$group": {
-                "_id": "$Decennie",
-                "films": {
-                    "$push": {
-                        "Titre": "$title",
-                        "Année": "$year",
-                        "Rating": "$rating",
-                        "Votes": "$Votes",
-                        "Réalisateur": "$Director"
-                    }
-                }
-            }
-        },
-        {
-            "$project": {
-                "Decennie": "$_id",
-                "Top 3": {"$slice": ["$films", 3]},
-                "_id": 0
-            }
-        }
+        }},
+        {"$project": {
+            "Decennie": "$_id",
+            "Top 3": {"$slice": ["$films", 3]},
+            "_id": 0
+        }}
     ]
-    
     return list(films.aggregate(pipeline))
 
-# Requête 10
+
+# ----------------------------
+# Requête 10 : Film le plus long par genre
+# ----------------------------
 def film_plus_long_par_genre():
     """
-    Trouve le film le plus long (Runtime) pour chaque genre.
-    - Un film multi-genres est évalué dans chaque genre.
-    - En cas d'égalité, le film avec le plus de votes est choisi.
+    Retourne le film le plus long (en minutes) pour chaque genre.
+    En cas d'égalité sur la durée, le film avec le plus de votes est retenu.
     """
     pipeline = [
-        #Filtre les films avec Runtime et genre valides
-        {
-            "$match": {
-                "Runtime (Minutes)": {"$exists": True, "$ne": None},
-                "genre": {"$exists": True, "$ne": None}
+        {"$match": {
+            "Runtime (Minutes)": {"$exists": True, "$ne": None},
+            "genre": {"$exists": True, "$ne": None}
+        }},
+        {"$addFields": {
+            "Genres": {
+                "$split": ["$genre", ","]
             }
-        },
-        #Sépare les genres (ex: "Crime,Horror" → ["Crime", "Horror"])
-        {
-            "$addFields": {
-                "Genres": {
-                    "$split": ["$genre", ","]
-                }
-            }
-        },
-        #Dédouble les films multi-genres (1 entrée par genre)
-        {
-            "$unwind": "$Genres"
-        },
-        #Nettoye les espaces autour des genres (ex: " Horror " → "Horror")
-        {
-            "$addFields": {
-                "Genres": {"$trim": {"input": "$Genres"}}
-            }
-        },
-        #Trie par genre → Runtime décroissant → Votes décroissant
-        {
-            "$sort": {
-                "Genres": 1,
-                "Runtime (Minutes)": -1,
-                "Votes": -1
-            }
-        },
-        #Garde le film le plus long par genre
-        {
-            "$group": {
-                "_id": "$Genres",
-                "Titre": {"$first": "$title"},
-                "Runtime": {"$first": "$Runtime (Minutes)"},
-                "Année": {"$first": "$year"},
-                "Réalisateur": {"$first": "$Director"},
-                "Votes": {"$first": "$Votes"}
-            }
-        },
-        #Formate le résultat
-        {
-            "$project": {
-                "_id": 0,
-                "Genre": "$_id",
-                "Titre": 1,
-                "Durée (min)": "$Runtime",
-                "Année": 1,
-                "Réalisateur": 1,
-                "Votes": 1
-            }
-        },
-        #Trie par ordre alphabétique des genres
-        {
-            "$sort": {"Genre": 1}
-        }
+        }},
+        {"$unwind": "$Genres"},
+        {"$addFields": {
+            "Genres": {"$trim": {"input": "$Genres"}}
+        }},
+        {"$sort": {
+            "Genres": 1,
+            "Runtime (Minutes)": -1,
+            "Votes": -1
+        }},
+        {"$group": {
+            "_id": "$Genres",
+            "Titre": {"$first": "$title"},
+            "Runtime": {"$first": "$Runtime (Minutes)"},
+            "Année": {"$first": "$year"},
+            "Réalisateur": {"$first": "$Director"},
+            "Votes": {"$first": "$Votes"}
+        }},
+        {"$project": {
+            "_id": 0,
+            "Genre": "$_id",
+            "Titre": 1,
+            "Durée (min)": "$Runtime",
+            "Année": 1,
+            "Réalisateur": 1,
+            "Votes": 1
+        }},
+        {"$sort": {"Genre": 1}}
     ]
-    
     return list(films.aggregate(pipeline))
 
 
-# Requête 11
+# ----------------------------
+# Requête 11 : Création d'une vue MongoDB pour les films premium
+# ----------------------------
 def creer_vue_films_premium(db):
     """
-    Crée une vue MongoDB des films premium
-    Args:
-        db: Objet de base de données MongoDB
+    Crée une vue 'films_premium' dans MongoDB pour afficher uniquement les films ayant 
+    un Metascore supérieur à 80 et un revenu supérieur à 50 millions.
     """
     view_name = "films_premium"
     pipeline = [
-        {
-            "$match": {
-                "Metascore": {"$gt": 80, "$exists": True},
-                "Revenue (Millions)": {"$gt": 50, "$exists": True}
-            }
-        },
-        {
-            "$project": {
-                "_id": 1,
-                "title": 1,
-                "year": 1,
-                "Metascore": 1,
-                "Revenue (Millions)": 1,
-                "Director": 1,
-                "rating": 1
-            }
-        }
+        {"$match": {"Metascore": {"$gt": 80, "$exists": True}, "Revenue (Millions)": {"$gt": 50, "$exists": True}}},
+        {"$project": {"_id": 1, "title": 1, "year": 1, "Metascore": 1, "Revenue (Millions)": 1, "Director": 1, "rating": 1}}
     ]
     
     if view_name not in db.list_collection_names():
@@ -363,64 +360,47 @@ def creer_vue_films_premium(db):
     return False
 
 
-# Requête 12
+# ----------------------------
+# Requête 12 : Corrélation entre la durée et le revenu des films
+# ----------------------------
 def correlation_duree_revenu():
     """
-    Calcule la corrélation entre durée et revenu.
-    Gère les cas où Revenue (Millions) est :
-    - Un nombre (ex: 341.26)
-    - Une chaîne avec virgule (ex: "341,26")
-    - Une chaîne vide ("")
+    Calcule la corrélation entre la durée (Runtime) et le revenu (Revenue) des films.
+    Gère différents formats pour la propriété 'Revenue (Millions)' et retourne un graphique.
     """
     pipeline = [
-        {
-            "$match": {
-                "Runtime (Minutes)": {"$exists": True, "$ne": None, "$type": "number"},
-                "Revenue (Millions)": {"$exists": True, "$ne": None, "$ne": ""}
+        {"$match": {
+            "Runtime (Minutes)": {"$exists": True, "$ne": None, "$type": "number"},
+            "Revenue (Millions)": {"$exists": True, "$ne": None, "$ne": ""}
+        }},
+        {"$addFields": {
+            "RevenueClean": {
+                "$cond": [
+                    {"$eq": [{"$type": "$Revenue (Millions)"}, "string"]},
+                    {"$toDouble": {"$replaceOne": {"input": "$Revenue (Millions)", "find": ",", "replacement": "."}}},
+                    "$Revenue (Millions)"
+                ]
             }
-        },
-        {
-            "$addFields": {
-                "RevenueClean": {
-                    "$cond": [
-                        {"$eq": [{"$type": "$Revenue (Millions)"}, "string"]},
-                        {"$toDouble": {
-                            "$replaceOne": {
-                                "input": "$Revenue (Millions)",
-                                "find": ",",
-                                "replacement": "."
-                            }
-                        }},
-                        "$Revenue (Millions)"
-                    ]
-                }
-            }
-        },
-        {
-            "$match": {
-                "RevenueClean": {"$type": "number"}
-            }
-        },
-        {
-            "$project": {
-                "Titre": "$title",
-                "Runtime": "$Runtime (Minutes)",
-                "Revenue": "$RevenueClean"
-            }
-        }
+        }},
+        {"$match": {
+            "RevenueClean": {"$type": "number"}
+        }},
+        {"$project": {
+            "Titre": "$title",
+            "Runtime": "$Runtime (Minutes)",
+            "Revenue": "$RevenueClean"
+        }}
     ]
-
-    # Récupération des données
     data = list(films.aggregate(pipeline))
     df = pd.DataFrame(data)
-
+    
     if df.empty:
         return {"error": "Aucune donnée valide après nettoyage."}
-
+    
     # Calcul de la corrélation
     corr = df["Runtime"].corr(df["Revenue"])
-
-    # Visualisation
+    
+    # Création du graphique
     plt.figure(figsize=(10, 6))
     sns.regplot(x="Runtime", y="Revenue", data=df, scatter_kws={"alpha": 0.5})
     plt.title("Corrélation Durée vs Revenu (en millions $)")
@@ -429,67 +409,63 @@ def correlation_duree_revenu():
     plot_path = "correlation_duree_revenu.png"
     plt.savefig(plot_path)
     plt.close()
-
+    
     return {
         "correlation": corr,
         "plot_path": plot_path,
         "sample_size": len(df),
         "excluded_count": films.count_documents({}) - len(df)
     }
-    
-    
-# Requête 13
+
+
+# ----------------------------
+# Requête 13 : Durée moyenne des films par décennie
+# ----------------------------
 def duree_moyenne_par_decennie():
     """
-    Calcule la durée moyenne des films par décennie.
-    Retourne un dictionnaire {décennie: durée_moyenne}.
+    Calcule la durée moyenne des films par décennie et retourne un dictionnaire 
+    avec la décennie et la durée moyenne arrondie à une décimale.
     """
     pipeline = [
-        {
-            "$match": {
-                "year": {"$gte": 1990, "$exists": True},
-                "Runtime (Minutes)": {"$exists": True, "$ne": None, "$type": "number"}
+        {"$match": {
+            "year": {"$gte": 1990, "$exists": True},
+            "Runtime (Minutes)": {"$exists": True, "$ne": None, "$type": "number"}
+        }},
+        {"$addFields": {
+            "decennie": {
+                "$concat": [
+                    {"$toString": {"$subtract": ["$year", {"$mod": ["$year", 10]}]}},
+                    "-",
+                    {"$toString": {"$add": [{"$subtract": ["$year", {"$mod": ["$year", 10]}]}, 9]}}
+                ]
             }
-        },
-        {
-            "$addFields": {
-                "decennie": {
-                    "$concat": [
-                        {"$toString": {"$subtract": ["$year", {"$mod": ["$year", 10]}]}},
-                        "-",
-                        {"$toString": {"$add": [{"$subtract": ["$year", {"$mod": ["$year", 10]}]}, 9]}}
-                    ]
-                }
-            }
-        },
-        {
-            "$group": {
-                "_id": "$decennie",
-                "duree_moyenne": {"$avg": "$Runtime (Minutes)"},
-                "count": {"$sum": 1}  # Nombre de films par décennie
-            }
-        },
-        {
-            "$project": {
-                "decennie": "$_id",
-                "duree_moyenne": {"$round": ["$duree_moyenne", 1]},  # Arrondi à 1 décimale
-                "count": 1,
-                "_id": 0
-            }
-        },
-        {
-            "$sort": {"decennie": 1}
-        }
+        }},
+        {"$group": {
+            "_id": "$decennie",
+            "duree_moyenne": {"$avg": "$Runtime (Minutes)"},
+            "count": {"$sum": 1}
+        }},
+        {"$project": {
+            "decennie": "$_id",
+            "duree_moyenne": {"$round": ["$duree_moyenne", 1]},
+            "count": 1,
+            "_id": 0
+        }},
+        {"$sort": {"decennie": 1}}
     ]
     
     results = list(films.aggregate(pipeline))
     return {res["decennie"]: res["duree_moyenne"] for res in results}
 
 
-
-############# exportation des données vers neo4j
+# ----------------------------
+# Exportation des données de MongoDB vers Neo4j
+# ----------------------------
 def exporter_donnees_pour_neo4j():
-    """Exporte les données nécessaires pour Neo4j"""
+    """
+    Exporte les données nécessaires pour l'importation dans Neo4j.
+    Retourne une liste de documents contenant les champs essentiels.
+    """
     client = connexion_mongo()
     db = client.entertainment
     films = db.films.find({}, {

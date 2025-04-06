@@ -1,26 +1,38 @@
-from database.connexion_neo4j import connexion_neo4j
-from import_neo4j import Neo4jImporter
-import streamlit as st
-from neo4j import GraphDatabase
-import pandas as pd
+# =============================================================================
+# Fichier : requete_neo4j.py
+# Description : Module pour l'exécution des requêtes sur la base de données Neo4j
+#               dans le cadre de l'analyse des films. Les fonctions sont appelées
+#               via l'interface Streamlit.
+# =============================================================================
+
+from database.connexion_neo4j import connexion_neo4j  # Import de la connexion à Neo4j
+from import_neo4j import Neo4jImporter  # Import pour pouvoir réimporter les données si nécessaire
+import streamlit as st  # Import de Streamlit pour l'interface utilisateur
+from neo4j import GraphDatabase  # Import pour interagir avec Neo4j
+import pandas as pd  # Import de Pandas pour la manipulation des données dans Streamlit
 
 
 class Neo4jManager:
     def __init__(self):
+        # Établissement de la connexion à la base Neo4j
         self.driver = connexion_neo4j()
         
     def close(self):
+        # Fermeture de la connexion Neo4j si elle existe
         if hasattr(self, 'driver'):
             self.driver.close()
     
+    # -------------------------------------------------------------------------
+    # Méthodes pour les requêtes sur Neo4j
+    # -------------------------------------------------------------------------
     
-    ## Méthodes Q14
-    
-      
-    
-    ## Méthodes Q15        
+    ## Méthode Q15 : Acteurs ayant joué avec Anne Hathaway
     def acteurs_avec_anne_hathaway(self):
-        """Question 15 - Acteurs ayant joué avec Anne Hathaway"""
+        """
+        Exécute une requête pour trouver les acteurs ayant joué dans les mêmes films qu'Anne Hathaway.
+        Retourne une liste de dictionnaires contenant le nom du co-acteur, la liste des films communs
+        et le nombre total de films en commun.
+        """
         try:
             with self.driver.session() as session:
                 result = session.run("""
@@ -36,8 +48,13 @@ class Neo4jManager:
             st.error(f"Erreur Neo4j: {str(e)}")
             return []
 
-    ## Méthodes Q16
+    ## Méthode Q16 : Acteur avec le plus gros revenu total
     def acteur_plus_rentable(self):
+        """
+        Exécute une requête pour trouver l'acteur dont la somme des revenus des films auxquels il
+        a participé est la plus élevée.
+        Retourne un dictionnaire contenant le nom de l'acteur, le revenu total et le nombre de films.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (a:Acteur)-[:A_JOUE_DANS]->(f:Film)
@@ -51,8 +68,12 @@ class Neo4jManager:
             record = result.single()
             return dict(record) if record else None
 
-    ## Méthodes Q17
+    ## Méthode Q17 : Moyenne des votes
     def moyenne_votes(self):
+        """
+        Calcule la moyenne des votes des films.
+        Retourne la moyenne des votes arrondie.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (f:Film)
@@ -62,8 +83,13 @@ class Neo4jManager:
             record = result.single()
             return record["moyenne_votes"] if record else None
 
-    ## Méthodes Q18
+    ## Méthode Q18 : Genre le plus représenté
     def genre_plus_represente(self):
+        """
+        Trouve le genre de film le plus représenté dans la base en comptant le nombre de films 
+        associés à chaque genre.
+        Retourne un dictionnaire avec le nom du genre et le nombre de films.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (f:Film)-[:A_POUR_GENRE]->(g:Genre)
@@ -74,8 +100,12 @@ class Neo4jManager:
             record = result.single()
             return dict(record) if record else None
 
-    ## Méthodes Q19
+    ## Méthode Q19 : Films des co-acteurs
     def films_coacteurs(self):
+        """
+        Trouve les films dans lesquels les co-acteurs d'un acteur donné ont joué.
+        Retourne une liste de dictionnaires avec le titre du film et la liste des co-acteurs.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (moi:Acteur)-[:A_JOUE_DANS]->(mes_films:Film)
@@ -88,8 +118,12 @@ class Neo4jManager:
             """)
             return [dict(record) for record in result]
         
-    ## Méthodes Q20 
+    ## Méthode Q20 : Réalisateur avec le plus d'acteurs distincts
     def realisateur_plus_acteurs_distincts(self):
+        """
+        Identifie le réalisateur ayant travaillé avec le plus grand nombre d'acteurs distincts.
+        Retourne un dictionnaire avec le nom du réalisateur et le nombre d'acteurs distincts.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (d:Realisateur)-[:A_REALISE]->(f:Film)<-[:A_JOUE_DANS]-(a:Acteur)
@@ -100,8 +134,12 @@ class Neo4jManager:
             record = result.single()
             return dict(record) if record else None
     
-    ## Méthodes Q21
+    ## Méthode Q21 : Films les plus connectés
     def films_plus_connectes(self):
+        """
+        Trouve les films qui partagent le plus d'acteurs en commun avec d'autres films.
+        Retourne une liste de dictionnaires avec le titre du film et le nombre d'acteurs communs.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (f:Film)<-[:A_JOUE_DANS]-(a:Acteur)-[:A_JOUE_DANS]->(f2:Film)
@@ -113,8 +151,12 @@ class Neo4jManager:
             """)
             return [dict(record) for record in result]
     
-    ## Méthodes Q22
+    ## Méthode Q22 : Top 5 acteurs avec le plus de réalisateurs différents
     def top_5_acteurs_realisateurs(self):
+        """
+        Identifie les 5 acteurs ayant joué avec le plus de réalisateurs différents.
+        Retourne une liste de dictionnaires avec le nom de l'acteur et le nombre de réalisateurs.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (a:Acteur)-[:A_JOUE_DANS]->(f:Film)<-[:A_REALISE]-(d:Realisateur)
@@ -124,14 +166,18 @@ class Neo4jManager:
             """)
             return [dict(record) for record in result]
     
-    ## Méthodes Q23
+    ## Méthode Q23 : Recommander un film à un acteur
     def recommander_film_a_acteur(self, actorName):
+        """
+        Recommande un film à un acteur basé sur les genres des films dans lesquels il a déjà joué.
+        Retourne un dictionnaire avec le titre du film, l'année et le nombre de votes.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (a:Acteur {name: $actorName})-[:A_JOUE_DANS]->(f:Film)-[:A_POUR_GENRE]->(g:Genre)
                 WITH a, collect(DISTINCT g) AS genres
-                MATCH (rec:Film)-[:A_POUR_GENRE]->(g)
-                WHERE g IN genres AND NOT (a)-[:A_JOUE_DANS]->(rec)
+                MATCH (rec:Film)-[:A_POUR_GENRE]->(g2:Genre)
+                WHERE g2.name IN genres AND NOT (a)-[:A_JOUE_DANS]->(rec)
                 RETURN rec.title AS film, rec.year AS year, rec.votes AS votes
                 ORDER BY rec.votes DESC
                 LIMIT 1
@@ -139,13 +185,12 @@ class Neo4jManager:
             record = result.single()
             return dict(record) if record else None
 
-
-    ## Méthodes Q24
+    ## Méthode Q24 : Créer relation INFLUENCE_PAR entre réalisateurs
     def creer_relation_influence(self, seuil=2):
         """
-        Crée des relations INFLUENCE_PAR entre les réalisateurs 
-        si le nombre de genres communs (entre leurs films) est supérieur ou égal au seuil.
-        Le paramètre 'seuil' est ajustable (défaut = 2).
+        Crée des relations INFLUENCE_PAR entre les réalisateurs si le nombre de genres communs entre leurs films
+        est supérieur ou égal au seuil (par défaut 2).
+        Retourne la liste des relations créées avec le nom des réalisateurs et le poids de l'influence.
         """
         with self.driver.session() as session:
             result = session.run("""
@@ -157,13 +202,13 @@ class Neo4jManager:
                 SET r.weight = commonGenres
                 RETURN d1.name AS director1, d2.name AS director2, r.weight AS influence
             """, {'seuil': seuil})
-            # On retourne la liste des relations créées
             return [dict(record) for record in result]
         
-    ## Méthodes Q25
+    ## Méthode Q25 : Chemin le plus court entre deux acteurs
     def chemin_plus_court(self, acteur1, acteur2):
         """
-        Trouve le chemin le plus court entre deux acteurs.
+        Trouve et retourne le chemin le plus court entre deux acteurs spécifiés.
+        Retourne le chemin sous forme d'objet (si trouvé).
         """
         with self.driver.session() as session:
             result = session.run("""
@@ -172,25 +217,17 @@ class Neo4jManager:
             """, {'acteur1': acteur1, 'acteur2': acteur2})
             return result.single()
 
-    ## Méthodes Q26
-    def communautes_acteurs(self):
-        with self.driver.session() as session:
-            result = session.run("""
-                CALL gds.louvain.stream("{\\"nodeProjection\\": \\"Acteur\\", \\"relationshipProjection\\": \\"A_JOUE_DANS\\"}")
-                YIELD nodeId, communityId
-                RETURN gds.util.asNode(nodeId).name AS actor, communityId
-                ORDER BY communityId, actor
-            """)
-            return [dict(record) for record in result]
-        
-        
-    ## Méthodes Q27
+    ## Méthode Q27 : Films avec genres en commun et réalisateurs différents
     def films_genres_communs_differents_realisateurs(self):
+        """
+        Trouve les films qui partagent un ou plusieurs genres en commun mais qui ont des réalisateurs différents.
+        Retourne une liste de dictionnaires avec les titres des deux films et le genre commun.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (f1:Film)-[:A_POUR_GENRE]->(g:Genre)<-[:A_POUR_GENRE]-(f2:Film)
                 WHERE f1 <> f2
-                  AND f1.year = f2.year  // facultatif si vous souhaitez comparer pour la même année
+                  AND f1.year = f2.year  // facultatif : comparaison pour la même année
                   AND NOT EXISTS {
                       MATCH (f1)<-[:A_REALISE]-(d1:Realisateur),
                             (f2)<-[:A_REALISE]-(d2:Realisateur)
@@ -201,8 +238,12 @@ class Neo4jManager:
             """)
             return [dict(record) for record in result]
         
-    ## Méthodes Q28
+    ## Méthode Q28 : Recommander des films en fonction d'un acteur
     def recommander_films_utilisateur(self, actorName):
+        """
+        Recommande des films à un utilisateur en fonction des préférences d'un acteur donné.
+        Retourne une liste de dictionnaires avec le titre, l'année et le nombre de votes des films recommandés.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (a:Acteur {name: $actorName})-[:A_JOUE_DANS]->(f:Film)-[:A_POUR_GENRE]->(g:Genre)
@@ -215,8 +256,13 @@ class Neo4jManager:
             """, {'actorName': actorName})
             return [dict(record) for record in result]
         
-    ## Méthodes Q29
+    ## Méthode Q29 : Créer relation CONCURRENCE entre réalisateurs
     def creer_relation_concurrence(self):
+        """
+        Crée des relations CONCURRENCE entre les réalisateurs ayant réalisé des films similaires
+        la même année. Retourne une liste de dictionnaires contenant les noms des réalisateurs, l'année
+        et le nombre de genres en commun.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (d1:Realisateur)-[:A_REALISE]->(f1:Film)-[:A_POUR_GENRE]->(g:Genre)<-[:A_POUR_GENRE]-(f2:Film)<-[:A_REALISE]-(d2:Realisateur)
@@ -229,8 +275,14 @@ class Neo4jManager:
             """)
             return [dict(record) for record in result]
         
-    ## Méthodes Q30
+    ## Méthode Q30 : Collaborations fréquentes entre réalisateurs et acteurs
     def collaborations_realisateurs_acteurs(self):
+        """
+        Analyse les collaborations entre réalisateurs et acteurs, en calculant le nombre de films communs,
+        ainsi que les revenus et les metascores moyens associés à ces collaborations.
+        Retourne une liste de dictionnaires avec le nom du réalisateur, de l'acteur, le nombre de
+        collaborations, le revenu moyen et le metascore moyen.
+        """
         with self.driver.session() as session:
             result = session.run("""
                 MATCH (d:Realisateur)-[:A_REALISE]->(f:Film)<-[:A_JOUE_DANS]-(a:Acteur)
@@ -242,12 +294,13 @@ class Neo4jManager:
             return [dict(record) for record in result]
 
 
- 
-
+# =============================================================================
+# Fonction requete_neo4j : point d'entrée pour l'interface Streamlit des requêtes Neo4j
+# =============================================================================
 def requete_neo4j():
     st.header("🔄 Requêtes Neo4j")
     
-    # Section Import
+    # --- Section Import des données dans Neo4j ---
     with st.expander("🔽 Initialisation de la base Neo4j"):
         if st.button("1. Importer les données dans Neo4j"):
             with st.spinner("Import en cours..."):
@@ -269,14 +322,11 @@ def requete_neo4j():
                         
                 except Exception as e:
                     st.error(f"Erreur critique lors de l'import : {str(e)}")
-
-    # Section Requêtes
+    
+    # --- Section des requêtes ---
     st.header("📊 Requêtes Neo4j")
     
-    
-    ##### à partir d'ici vous sverrez les boutons Streamlit qui appellent ces méthodes
-    
-    # Question 14
+    # Q14 : Acteur le plus prolifique
     if st.button("14 - Acteur le plus prolifique"):
         try:
             with Neo4jImporter() as importer:  
@@ -288,7 +338,7 @@ def requete_neo4j():
         except Exception as e:
             st.error(f"Erreur lors de la requête : {str(e)}")
             
-    # Question 15        
+    # Q15 : Acteurs ayant joué avec Anne Hathaway
     if st.button("15 - Acteurs ayant joué avec Anne Hathaway"):
         manager = Neo4jManager()
         results = manager.acteurs_avec_anne_hathaway()
@@ -300,7 +350,7 @@ def requete_neo4j():
                     st.write("Films en commun :", ", ".join(r['films']))
         manager.close()
                     
-    # Question 16
+    # Q16 : Acteur avec le plus gros revenu total
     if st.button("16 - Acteur avec le plus gros revenu total"):
         manager = Neo4jManager()
         result = manager.acteur_plus_rentable()
@@ -310,14 +360,14 @@ def requete_neo4j():
             st.warning("Aucun résultat trouvé")
         manager.close()
 
-    # Question 17
+    # Q17 : Moyenne des votes
     if st.button("17 - Moyenne des votes"):
         manager = Neo4jManager()
         moyenne = manager.moyenne_votes()
         st.success(f"⭐ Moyenne des votes: {moyenne:,.0f}")
         manager.close()
 
-    # Question 18
+    # Q18 : Genre le plus représenté
     if st.button("18 - Genre le plus représenté"):
         manager = Neo4jManager()
         result = manager.genre_plus_represente()
@@ -327,7 +377,7 @@ def requete_neo4j():
             st.warning("Aucun genre trouvé")
         manager.close()
 
-    # Question 19
+    # Q19 : Films des co-acteurs
     if st.button("19 - Films des co-acteurs"):
         manager = Neo4jManager()
         results = manager.films_coacteurs()
@@ -340,7 +390,7 @@ def requete_neo4j():
                     st.write("Avec:", ", ".join(item["coacteurs"]))
         manager.close()
     
-    # Question 20
+    # Q20 : Réalisateur avec le plus d'acteurs distincts
     if st.button("20 - Réalisateur avec le plus d'acteurs distincts"):
         manager = Neo4jManager()
         result = manager.realisateur_plus_acteurs_distincts()
@@ -350,7 +400,7 @@ def requete_neo4j():
             st.warning("Aucun résultat trouvé")
         manager.close()
     
-    # Question 21
+    # Q21 : Films les plus connectés
     if st.button("21 - Films les plus connectés"):
         manager = Neo4jManager()
         results = manager.films_plus_connectes()
@@ -361,7 +411,7 @@ def requete_neo4j():
             st.warning("Aucun résultat trouvé")
         manager.close()
         
-    # Question 22
+    # Q22 : Top 5 acteurs avec le plus de réalisateurs différents
     if st.button("22 - Top 5 acteurs avec le plus de réalisateurs différents"):
         manager = Neo4jManager()
         results = manager.top_5_acteurs_realisateurs()
@@ -372,7 +422,7 @@ def requete_neo4j():
             st.warning("Aucun résultat trouvé")
         manager.close()
         
-    # Question 23
+    # Q23 : Recommander un film à un acteur
     if st.button("23 - Recommander un film à un acteur"):
         actor_name = st.text_input("Nom de l'acteur", value="Anne Hathaway")
         if actor_name:
@@ -384,7 +434,7 @@ def requete_neo4j():
                 st.warning("Aucune recommandation trouvée")
             manager.close()
 
-    # Question 24
+    # Q24 : Créer relation INFLUENCE_PAR entre réalisateurs
     if st.button("24 - Créer relation INFLUENCE_PAR entre réalisateurs"):
         manager = Neo4jManager()
         relations = manager.creer_relation_influence()
@@ -395,7 +445,7 @@ def requete_neo4j():
             st.info("Aucune relation créée (vérifiez le seuil ou les données)")
         manager.close()
 
-    # Question 25
+    # Q25 : Chemin le plus court entre deux acteurs
     if st.button("25 - Chemin le plus court entre deux acteurs"):
         acteur1 = st.text_input("Nom du premier acteur", value="Tom Hanks")
         acteur2 = st.text_input("Nom du second acteur", value="Scarlett Johansson")
@@ -408,17 +458,17 @@ def requete_neo4j():
                 st.warning("Aucun chemin trouvé")
             manager.close()
 
-    # Question 26
-    if st.button("26 - Analyse des communautés d'acteurs (Louvain)"):
-        manager = Neo4jManager()
-        communities = manager.communautes_acteurs()
-        if communities:
-            st.dataframe(pd.DataFrame(communities))
-        else:
-            st.warning("Aucune communauté détectée")
-        manager.close()
+    # Q26 : (La section Q26 est actuellement commentée)
+    # if st.button("26 - Analyse des communautés d'acteurs (Louvain)"):
+    #     manager = Neo4jManager()
+    #     communities = manager.communautes_acteurs()
+    #     if communities:
+    #         st.dataframe(pd.DataFrame(communities))
+    #     else:
+    #         st.warning("Aucune communauté détectée")
+    #     manager.close()
         
-    # Question 27
+    # Q27 : Films avec genres en commun et réalisateurs différents
     if st.button("27 - Films avec genres en commun et réalisateurs différents"):
         manager = Neo4jManager()
         results = manager.films_genres_communs_differents_realisateurs()
@@ -429,7 +479,7 @@ def requete_neo4j():
             st.warning("Aucun résultat trouvé")
         manager.close()
         
-    # Question 28
+    # Q28 : Recommander des films en fonction d'un acteur
     if st.button("28 - Recommander des films en fonction d'un acteur"):
         actor_name = st.text_input("Nom de l'acteur", value="Anne Hathaway")
         if actor_name:
@@ -442,7 +492,7 @@ def requete_neo4j():
                 st.warning("Aucune recommandation trouvée")
             manager.close()
             
-    # Question 29
+    # Q29 : Créer relation CONCURRENCE entre réalisateurs
     if st.button("29 - Créer relation CONCURRENCE entre réalisateurs"):
         manager = Neo4jManager()
         relations = manager.creer_relation_concurrence()
@@ -453,7 +503,7 @@ def requete_neo4j():
             st.warning("Aucune relation créée")
         manager.close()
         
-    # Question 30
+    # Q30 : Collaborations fréquentes entre réalisateurs et acteurs
     if st.button("30 - Collaborations fréquentes entre réalisateurs et acteurs"):
         manager = Neo4jManager()
         collabs = manager.collaborations_realisateurs_acteurs()
@@ -462,8 +512,36 @@ def requete_neo4j():
         else:
             st.warning("Aucune collaboration trouvée")
         manager.close()
-    
 
-    
-    
 
+# =============================================================================
+# Fonction principale : point d'entrée de l'application Streamlit
+# =============================================================================
+def main():
+    st.set_page_config(page_title="Projet NoSQL", layout="wide")
+    st.title("🎬 Projet NoSQL - Brayane MBA ABESSOLO")
+    st.markdown("""
+    **Objectif** : Explorer une base de données MongoDB/Neo4j contenant des informations sur des films
+    """)
+    
+    # Navigation via la barre latérale pour sélectionner le module d'analyse
+    page = st.sidebar.radio(
+        "Menu principal",
+        ["MongoDB - Analyse de films", "Neo4j - Relations", "Visualisations avancées"],
+        index=0
+    )
+    if page == "MongoDB - Analyse de films":
+        from requete.requete_mongo import requete_mongo
+        requete_mongo()
+    elif page == "Neo4j - Relations":
+        from requete.requete_neo4j import requete_neo4j
+        requete_neo4j()  # Appel du module des requêtes Neo4j
+    else:
+        st.warning("Module de visualisation en cours de développement...")
+
+
+# =============================================================================
+# Point d'entrée de l'application
+# =============================================================================
+if __name__ == "__main__":
+    main()
