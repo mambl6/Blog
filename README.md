@@ -66,8 +66,9 @@ Cela ouvrira une interface web dans votre navigateur où vous pourrez :
 
 - **Interface Streamlit :**
   - Interface utilisateur interactive permettant d'exécuter les requêtes et de visualiser les résultats sous forme de tableaux et graphiques.
- ![Capture d'écran 2025-04-05 220708](https://github.com/user-attachments/assets/5499879a-c745-4fea-8577-c0ddaf729e14)
-![Capture d'écran 2025-04-05 220723](https://github.com/user-attachments/assets/8c3da253-102f-4192-a64b-20d324e86e2a)
+![Capture d'écran 2025-04-06 110610](https://github.com/user-attachments/assets/33b7f74b-8e22-4315-bf73-89c8d0b1d6a9)
+![Capture d'écran 2025-04-06 110641](https://github.com/user-attachments/assets/8739d141-abbf-477c-9fab-7f9428b19f86)
+
 
     
 
