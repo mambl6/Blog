@@ -5,8 +5,11 @@ Ce projet a pour objectif d'explorer et d'interroger des bases de données NoSQL
 ## Prérequis
 
 - Python 3.x
-
 - Git
+- MongoDB - Base de données NoSQL orientée documents
+- Neo4j - Base de données NoSQL orientée graphes
+- Streamlit - Framework pour créer des interfaces web interactives
+- PyMongo - Client Python pour interagir avec MongoDB
 
 ## Étapes d'installation
 
